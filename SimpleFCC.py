@@ -189,7 +189,7 @@ if __name__ == "__main__":
         plt.plot(model.loss)
         plt.show()
     # Test of FCC: XOR gate
-    elif sys.argv[2] == "2":
+    elif sys.argv[1] == "2":
         # Creating the neural network (model)
         model = Model()
         model.add(BlockFCC(2,3,act_fun="sigmoid"))
