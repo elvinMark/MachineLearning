@@ -2,51 +2,88 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-class DecisionTree:
+""" This is my first attempt to create a Decision Tree Classifier, for discrete
+data, usinf ID3 algorithm
+"""
+
+# We need to create a function that calculate the entropy of data
+def calculate_entropy(y_data):
+    unique_labels = np.unique(y_data)
+    N = len(y_data)
+    S = 0
+    for l in unique_labels:
+        tmp = np.where(y_data==l)
+        m = len(tmp[0])
+        p = m/N
+        S -= p*np.log2(p)
+    return S
+
+# We also need a function to measure the Information Gain of an Attribute
+def information_gain(x_data,y_data):
+    unique_data = np.unique(x_data)
+    N = len(x_data)
+    IG = calculate_entropy(y_data)
+    for d in unique_data:
+        tmp = np.where(x_data == d)
+        m   = len(tmp[0])
+        p = m/N
+        IG -= p*calculate_entropy(y_data[tmp])
+    return IG
+
+# We also need a class for the nodes of our tree
+class TreeNode:
     def __init__(self):
+        self.decision_idx = None
         self.data = None
-        self.left = None
-        self.right = None
-        self.class_type = None
-    def predict_single(test):
-        if self.left == None and self.right == None:
-            return self.class_type
-        idx = self.data["attribute_index"]
-        threshold = self.data["threshold"]
-        if test[idx] < threshold:
-            return self.left.predict_single(test)
-        else:
-            return self.right.predict_single(test)
-    def predict(self,test):
-        return [self.predict_single(t) for t in test]
+        self.child = []
+    def get_child_idx(self,x):
+        return x[self.decision_idx]
+    def predict_single(self,x):
+        if len(self.child) == 0:
+            return self.data
+        print(x)
+        child_idx = self.get_child_idx(x)
+        return self.child[child_idx].predict_single(x)
+    def predict(self,x):
+        return np.array([self.predict_single(x0) for x0 in x])
+    def print(self,depth = 0):
+        print(" "*depth,self.data,self.decision_idx)
+        for child in self.child:
+            child.print(depth + 5)
 
-def calculate_entropy(y_train,class_type = 0):
-    N = len(y_train)
-    p = len(y_train[np.where(y_train == class_type)])/N
-    n = 1 - p
-    return -(p*np.log(p) + n*log(n))
-
-def gain_entropy(x_train,y_train,attribute_index=0,class_type=0):
-    return None
-
-def get_decision_tree(x_train,y_train,attribute_indexes=None):
-    root = DecisionTree()
-    min_class = np.min(y_train)
-    entropy = calculate_entropy(y_train,class_type=min_class)
-    if entropy == 0:
-        root.class_type = min_class
+# Finally we need a function that recursively creates the decision tree
+def get_decision_tree(x_data,y_data,attr_idxs=[],start=True):
+    root = TreeNode()
+    S = calculate_entropy(y_data)
+    if S == 0:
+        root.data = y_data[0]
         return root
-    if attribute_indexes == None:
-        _,num_attributes = x_train.shape
-        attribute_index = [i for i in range(num_attributes)]
-    gain_entropies = [gain_entropy(x_train,y_train,attribute_index=i,class_type=min_class) for i in attribute_indexes]
-    attribute_index = gain_entropies.index(max(gain_entropies))
-    tmp = x_train[:,attribute_index]
-    p = tmp[np.where(y_train == min_class)]
-    n = tmp[np.where(y_train != min_class)]
-    
-    threshold = (np.max(p) + np.min(n))/2
-    root.data = {"attribute_index":attribute_index,"threshold":threshold}
-    left_x_train = x_train[np.where(y_train)]
-    root.left = get_decision_tree(x_train)
-    return None
+    if start:
+        _,tmp = x_data.shape
+        attr_idxs = np.array([i for i in range(tmp)])
+        start = False
+    if len(attr_idxs) == 0:
+        root.data = y_data[0]
+        return root
+    info_gains = [information_gain(x_data[:,f],y_data) for f in attr_idxs]
+    max_idx = info_gains.index(max(info_gains))
+    new_atrr_idxs = np.delete(attr_idxs,max_idx)
+    unique_data = np.unique(x_data[:,max_idx])
+    root.decision_idx = max_idx
+    # print("attr_idx: ",attr_idxs)
+    # print("new_attr_idxs: ",new_atrr_idxs)
+    for d in unique_data:
+        tmp = np.where(x_data[:,max_idx] == d)
+        root.child.append(get_decision_tree(x_data[tmp],y_data[tmp],new_atrr_idxs,start))
+    return root
+
+if __name__ == "__main__":
+    # Reading sample data to classify
+    data = pd.read_csv("data/data-test1.csv")
+    y_train = data["Infected"].values
+    x_train = data.drop("Infected",axis=1).values
+    root= get_decision_tree(x_train,y_train)
+    print(root)
+    root.print()
+    print(root.predict(x_train[3:6]))
+    print(y_train[3:6])
