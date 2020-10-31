@@ -35,7 +35,7 @@ class TreeNode:
     def __init__(self):
         self.decision_idx = None
         self.data = None
-        self.child = []
+        self.child = {}
     def get_child_idx(self,x):
         return x[self.decision_idx]
     def predict_single(self,x):
@@ -49,7 +49,7 @@ class TreeNode:
     def print(self,depth = 0):
         print(" "*depth,self.data,self.decision_idx)
         for child in self.child:
-            child.print(depth + 5)
+            self.child[child].print(depth + 5)
 
 # Finally we need a function that recursively creates the decision tree
 def get_decision_tree(x_data,y_data,attr_idxs=[],start=True):
@@ -70,11 +70,9 @@ def get_decision_tree(x_data,y_data,attr_idxs=[],start=True):
     new_atrr_idxs = np.delete(attr_idxs,max_idx)
     unique_data = np.unique(x_data[:,max_idx])
     root.decision_idx = max_idx
-    # print("attr_idx: ",attr_idxs)
-    # print("new_attr_idxs: ",new_atrr_idxs)
     for d in unique_data:
         tmp = np.where(x_data[:,max_idx] == d)
-        root.child.append(get_decision_tree(x_data[tmp],y_data[tmp],new_atrr_idxs,start))
+        root.child[d] = get_decision_tree(x_data[tmp],y_data[tmp],new_atrr_idxs,start)
     return root
 
 if __name__ == "__main__":
@@ -85,5 +83,6 @@ if __name__ == "__main__":
     root= get_decision_tree(x_train,y_train)
     print(root)
     root.print()
-    print(root.predict(x_train[3:6]))
-    print(y_train[3:6])
+    print(root.predict(x_train))
+    print(y_train)
+    
